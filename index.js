@@ -2,17 +2,19 @@
 const yargs = require('yargs');
 const shell = require('shelljs');
 const path = require('path');
+const axios = require('axios');
 const dataPath = path.join(process.env.HOME, '.easypack');
 if(!(shell.which('tar') && shell.which('wget') && shell.which('gzip'))) {
     shell.echo("This tool requires tar, gzip and wget.");
 }
 const cwd = shell.pwd();
+var installURL;
 yargs.usage('$0 <command> [args]').command('install <package>', 'Install <package>.', (args) => {
     args.positional('package', {
         type: 'string',
         describe: 'Package to install. Can be a URL, path or package name.'
     });
-}, args => {
+}, installURL = args => {
     //const repos = JSON.parse(shell.cat(path.join(dataPath, 'repos.json')));
     if(args.package.startsWith('http://') || args.package.startsWith('https://')) {
         shell.echo(`Downloading ${args.package}...`)
@@ -42,26 +44,54 @@ yargs.usage('$0 <command> [args]').command('install <package>', 'Install <packag
     shell.exec(`gzip -f ${packFileName}`);
 }).command('uninstall <package>', 'Uninstall a package', args => {
     args.positional('package', {
-        describe: 'The package to uninstall, in name@version format. (ex. easypack@1.0.0)',
+        describe: 'The package to uninstall (ex. easypack)',
         type: 'string'
     });
 }, args => {
-    const absPath = path.join(dataPath, 'packages', args.package);
-    const packdata = JSON.parse(shell.cat(path.join(absPath, 'easypack.json')));
-    shell.echo(`Uninstalling ${packdata.name}...`);
-    if('bin' in packdata) Object.keys(packdata.bin).forEach(exec => {
-        shell.rm(path.join(process.env.HOME, '.local', 'bin', exec));
+    const absPaths = shell.ls(path.join(dataPath, 'packages')).map(package => ({name: package.split('@')[0], packPath: path.join(dataPath, 'packages', package)})).filter(elem => elem.name == args.package).map(elem => elem.packPath);
+    absPaths.forEach(absPath => {
+        const packdata = JSON.parse(shell.cat(path.join(absPath, 'easypack.json')));
+        shell.echo(`Uninstalling ${packdata.name}...`);
+        if('bin' in packdata) Object.keys(packdata.bin).forEach(exec => {
+            shell.rm(path.join(process.env.HOME, '.local', 'bin', exec));
+        });
+        if('lib' in packdata) Object.keys(packdata.lib).forEach(exec => {
+            shell.rm(path.join(process.env.HOME, '.local', 'lib', exec));
+        });
+        if('include' in packdata) Object.keys(packdata.include).forEach(exec => {
+            shell.rm(path.join(process.env.HOME, '.local', 'include', exec));
+        });
+        shell.rm('-rf', absPath);
     });
-    if('lib' in packdata) Object.keys(packdata.lib).forEach(exec => {
-        shell.rm(path.join(process.env.HOME, '.local', 'lib', exec));
+}).command('update <package>', 'Update a package', args => {
+    args.positional('package', {
+        desc: 'Package to update (without version number)',
+        type: 'string'
     });
-    if('include' in packdata) Object.keys(packdata.include).forEach(exec => {
-        shell.rm(path.join(process.env.HOME, '.local', 'include', exec));
-    });
-    shell.rm('-rf', absPath);
+}, async args => {
+    shell.echo('Getting newest version...');
+    const packPath = shell.ls(path.join(dataPath, 'packages')).map(package => ({name: package.split('@')[0], packPath: path.join(dataPath, 'packages', package)})).filter(elem => elem.name == args.package).sort(elem, elem2 => elem.packPath.split('@')[1].localeCompare(elem2.packPath.split('@')[1]))[0].packPath;
+    const packdata_old = JSON.parse(shell.cat(path.join(packPath, 'easypack.json')));
+    const source = packdata_old.source;
+    if(source == 'local') {
+        shell.echo('Package not installed from repo, cannot update');
+        shell.exit(42.5);
+        return;
+    }
+    shell.echo('Downloading meta...');
+    const repoJson = JSON.parse(await axios.get(source));
+    const packdata_new = repoJson.packages.find(pack => pack.name == args.package);
+    if(packdata_old.version == packdata_new.version) {
+        shell.echo('Nothing to do!');
+        shell.exit(0);
+        return;
+    }
+    shell.echo('Installing new version, switching to install mode...');
+    installURL(packdata_new.url);
 }).argv;
-function install(dirPath) {
+function install(dirPath, source = "local") {
     const packdata = JSON.parse(shell.cat(path.join(dirPath, 'easypack.json')));
+    packdata.source = source;
     const packagePath = path.join(dataPath, 'packages', packdata.name + '@' + packdata.version);
     shell.mkdir('-p', packagePath);
     shell.mv(dirPath + '/*', packagePath);
@@ -79,4 +109,5 @@ function install(dirPath) {
     if('include' in packdata) Object.keys(packdata.include).forEach(inclName => {
         shell.ln('-s', path.join(packagePath, packdata.include[inclName]), path.join(process.env.HOME, '.local', 'include', inclName));
     });
+    shell.echo(JSON.stringify(packdata)).to(path.join(packagePath, 'easypack.json'));
 }

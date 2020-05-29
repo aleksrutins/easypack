@@ -12,6 +12,7 @@
     "easypack": "index.js"
   },
   "dependencies": {
+    "axios": "^0.19.2",
     "shelljs": "^0.8.4",
     "yargs": "^15.3.1"
   }
