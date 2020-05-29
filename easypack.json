@@ -1,0 +1,8 @@
+{
+    "name": "easypack",
+    "version": "1.0.0",
+    "packDirs": ["./bin"],
+    "bin": {
+        "easypack": "bin/easypack"
+    }
+}
