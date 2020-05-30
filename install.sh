@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 SUCMD=""
 IPATH="$HOME/.local/bin/easypack"
 
