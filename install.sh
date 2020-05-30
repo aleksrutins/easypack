@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-easypack-installer() {
 SUCMD=""
 IPATH="$HOME/.local/bin/easypack"
 
@@ -19,5 +18,3 @@ echo "Downloading..."
 $SUCMD wget https://raw.githubusercontent.com/munchkinhalfling/easypack/master/bin/easypack -O $IPATH --show-progress
 $SUCMD chmod +x $IPATH
 echo "Done! Just make sure $IPATH is in your \$PATH."
-}
-easypack-installer
