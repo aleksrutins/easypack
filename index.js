@@ -3,6 +3,7 @@ const yargs = require('yargs');
 const shell = require('shelljs');
 const path = require('path');
 const axios = require('axios').default;
+const fs = require('fs/promises');
 const dataPath = path.join(process.env.HOME, '.easypack');
 if(!(shell.which('tar') && shell.which('wget') && shell.which('gzip'))) {
     shell.echo("This tool requires tar, gzip and wget.");
@@ -109,12 +110,12 @@ yargs.usage('$0 <command> [args]').command('install <package>', 'Install <packag
         describe: "The URL of the repository to add",
         type: "string"
     });
-}, args => {
-    const curRepos = JSON.parse(shell.cat(path.join(dataPath, 'repos.json')));
-    curRepos.repos.push(args.url);
-    shell.echo(JSON.stringify(curRepos)).to(path.join(dataPath, 'repos.json'));
+}, async args => {
+    const curRepos = new Set(JSON.parse(shell.cat(path.join(dataPath, 'repos.json'))).repos);
+    curRepos.add(args.url);
+    await fs.writeFile(path.join(dataPath, 'repos.json'), JSON.stringify({repos: curRepos}), 'utf8');
 }).argv;
-function install(dirPath, source = "local") {
+async function install(dirPath, source = "local") {
     const packdata = JSON.parse(shell.cat(path.join(dirPath, 'easypack.json')));
     packdata.source = source;
     const packagePath = path.join(dataPath, 'packages', packdata.name + '@' + packdata.version);
@@ -134,5 +135,5 @@ function install(dirPath, source = "local") {
     if('include' in packdata) Object.keys(packdata.include).forEach(inclName => {
         shell.ln('-s', path.join(packagePath, packdata.include[inclName]), path.join(process.env.HOME, '.local', 'include', inclName));
     });
-    shell.echo(JSON.stringify(packdata)).to(path.join(packagePath, 'easypack.json'));
+    await fs.writeFile(path.join(packagePath, 'easypack.json'), path.join(packagePath, 'easypack.json'));
 }
