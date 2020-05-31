@@ -2,20 +2,20 @@
 const yargs = require('yargs');
 const shell = require('shelljs');
 const path = require('path');
-const axios = require('axios');
+const axios = require('axios').default;
 const dataPath = path.join(process.env.HOME, '.easypack');
 if(!(shell.which('tar') && shell.which('wget') && shell.which('gzip'))) {
     shell.echo("This tool requires tar, gzip and wget.");
 }
 const cwd = shell.pwd();
 var installURL;
-yargs.usage('$0 <command> [args]').command('install <package>', 'Install <package>.', (args) => {
+yargs.usage('$0 <command> [args]').command('install <package>', 'Install <package>.', async (args) => {
     args.positional('package', {
         type: 'string',
         describe: 'Package to install. Can be a URL, path or package name.'
     });
-}, installURL = args => {
-    //const repos = JSON.parse(shell.cat(path.join(dataPath, 'repos.json')));
+}, installURL = async (args, source = "local") => {
+    const {repos} = JSON.parse(shell.cat(path.join(dataPath, 'repos.json')));
     if(args.package.startsWith('http://') || args.package.startsWith('https://')) {
         shell.echo(`Downloading ${args.package}...`)
         shell.exec(`wget -O "${path.join(dataPath, 'tmp-pack.tgz')}" "${args.package}"`);
@@ -23,7 +23,7 @@ yargs.usage('$0 <command> [args]').command('install <package>', 'Install <packag
         shell.mkdir('-p', path.join(dataPath, 'tmp-unpack'));
         shell.cd(path.join(dataPath, 'tmp-unpack'));
         shell.exec(`tar -xzf ${path.join(dataPath, 'tmp-pack.tgz')}`)
-        install(path.join(dataPath, 'tmp-unpack'));
+        install(path.join(dataPath, 'tmp-unpack'), source);
         shell.rm('-rf', path.join(dataPath, 'tmp-unpack'));
     } else if(args.package.startsWith('./') || args.package.startsWith('../') || args.package.startsWith('/')) {
         const absPath = path.resolve(args.package);
@@ -31,8 +31,24 @@ yargs.usage('$0 <command> [args]').command('install <package>', 'Install <packag
         shell.mkdir('-p', path.join(dataPath, 'tmp-unpack'));
         shell.cd(path.join(dataPath, 'tmp-unpack'));
         shell.exec(`tar -xzf ${absPath}`);
-        install(path.join(dataPath, 'tmp-unpack'));
+        install(path.join(dataPath, 'tmp-unpack'), source);
         shell.rm('-rf', path.join(dataPath, 'tmp-unpack'));
+    } else {
+        shell.echo("Getting repository meta...");
+        let repoLists = [];
+        for(let repo of repos) {
+            shell.echo(repo);
+            repoLists.push((await axios.get(repo)).data);
+        }
+        shell.echo("Finding repo for package...");
+        const correctRepo = repoLists.find(repo => repo.packages.find(pack => pack.name == args.package) !== undefined);
+        if(correctRepo == undefined) {
+            shell.echo("Could not find package.");
+            shell.exit(42.5);
+            return;
+        }
+        const packURL = correctRepo.packages.find(pack => pack.name == args.package).url;
+        installURL({package: packURL}, repos[repoLists.indexOf(correctRepo)]);
     }
     shell.cd(cwd);
 }).command('make', 'Make a package according to the values in easypack.json', () => {}, args => {
@@ -79,7 +95,7 @@ yargs.usage('$0 <command> [args]').command('install <package>', 'Install <packag
         return;
     }
     shell.echo('Downloading meta...');
-    const repoJson = JSON.parse(await axios.get(source));
+    const repoJson = (await axios.get(source)).data;
     const packdata_new = repoJson.packages.find(pack => pack.name == args.package);
     if(packdata_old.version == packdata_new.version) {
         shell.echo('Nothing to do!');
@@ -87,7 +103,16 @@ yargs.usage('$0 <command> [args]').command('install <package>', 'Install <packag
         return;
     }
     shell.echo('Installing new version, switching to install mode...');
-    installURL(packdata_new.url);
+    await installURL(packdata_new.url);
+}).command("addrepo <url>", "Add a repository", args => {
+    args.positional('url', {
+        describe: "The URL of the repository to add",
+        type: "string"
+    });
+}, args => {
+    const curRepos = JSON.parse(shell.cat(path.join(dataPath, 'repos.json')));
+    curRepos.repos.push(args.url);
+    shell.echo(JSON.stringify(curRepos)).to(path.join(dataPath, 'repos.json'));
 }).argv;
 function install(dirPath, source = "local") {
     const packdata = JSON.parse(shell.cat(path.join(dirPath, 'easypack.json')));
