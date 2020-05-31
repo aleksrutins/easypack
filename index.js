@@ -142,5 +142,5 @@ async function install(dirPath, source = "local") {
     if('include' in packdata) Object.keys(packdata.include).forEach(inclName => {
         shell.ln('-s', path.join(packagePath, packdata.include[inclName]), path.join(process.env.HOME, '.local', 'include', inclName));
     });
-    await fs.writeFile(path.join(packagePath, 'easypack.json'), path.join(packagePath, 'easypack.json'));
+    await fs.writeFile(path.join(packagePath, 'easypack.json'), JSON.stringify(packdata));
 }
