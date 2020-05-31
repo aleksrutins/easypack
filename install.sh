@@ -18,7 +18,7 @@ echo "Downloading..."
 $SUCMD wget https://raw.githubusercontent.com/munchkinhalfling/easypack/master/bin/easypack.gz -O - --show-progress | gunzip -c - > $IPATH
 $SUCMD chmod +x $IPATH
 mkdir -p $HOME/.easypack
-echo > $HOME/.easypack/repos.json <<EOF
+cat > $HOME/.easypack/repos.json <<EOF
 {
     "repos": [
         "https://munchkinhalfling.github.io/easypkg-repo/repo.json"
