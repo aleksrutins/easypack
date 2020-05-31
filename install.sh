@@ -15,7 +15,7 @@ select location in "User-wide" "System-wide"; do
 done
 echo == Installing to $IPATH ==
 echo "Downloading..."
-$SUCMD wget https://raw.githubusercontent.com/munchkinhalfling/easypack/master/bin/easypack -O - --show-progress | gunzip -c - > $IPATH
+$SUCMD wget https://raw.githubusercontent.com/munchkinhalfling/easypack/master/bin/easypack.gz -O - --show-progress | gunzip -c - > $IPATH
 $SUCMD chmod +x $IPATH
 mkdir -p $HOME/.easypack
 echo > $HOME/.easypack/repos.json <<EOF
