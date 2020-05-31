@@ -115,7 +115,7 @@ yargs.usage('$0 <command> [args]').command('install <package>', 'Install <packag
     curRepos.add(args.url);
     await fs.writeFile(path.join(dataPath, 'repos.json'), JSON.stringify({repos: curRepos}), 'utf8');
 }).command('init', 'Blow up the universe (reset everything)', () => {}, async () => {
-    await fs.writeFile(path.join(dataPath, 'repos.json'), JSON.parse({
+    await fs.writeFile(path.join(dataPath, 'repos.json'), JSON.stringify({
         "repos": [
             "https://munchkinhalfling.github.io/easypkg-repo/repo.json"
         ]
