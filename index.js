@@ -114,6 +114,13 @@ yargs.usage('$0 <command> [args]').command('install <package>', 'Install <packag
     const curRepos = new Set(JSON.parse(shell.cat(path.join(dataPath, 'repos.json'))).repos);
     curRepos.add(args.url);
     await fs.writeFile(path.join(dataPath, 'repos.json'), JSON.stringify({repos: curRepos}), 'utf8');
+}).command('init', 'Blow up the universe (reset everything)', () => {}, async () => {
+    await fs.writeFile(path.join(dataPath, 'repos.json'), JSON.parse({
+        "repos": [
+            "https://munchkinhalfling.github.io/easypkg-repo/repo.json"
+        ]
+    }));
+    // Any other post-install tasks
 }).argv;
 async function install(dirPath, source = "local") {
     const packdata = JSON.parse(shell.cat(path.join(dirPath, 'easypack.json')));
