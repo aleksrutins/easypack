@@ -1,4 +1,5 @@
 # easypack
+# This branch is the branch for the D rewrite (which I am rewriting after wiping the original rewrite off of my hard drive accidentally before pushing)
 ## A cross-*nix package manager written in JavaScript
 ### Installation
 ```bash
