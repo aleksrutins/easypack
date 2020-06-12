@@ -1,0 +1,6 @@
+name "easypack"
+description "Yet another package manager."
+authors "munchkinhalfling"
+copyright "Copyright © 2020, munchkinhalfling"
+license "GPL"
+dependency "archive" version="~>0.7.0"
