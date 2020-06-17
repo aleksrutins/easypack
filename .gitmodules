@@ -1,3 +1,4 @@
-[submodule "src/easypack-dsl"]
-	path = src/easypack-dsl
+
+[submodule "src/dsl"]
+	path = src/dsl
 	url = https://github.com/munchkinhalfling/easypack-dsl.git
